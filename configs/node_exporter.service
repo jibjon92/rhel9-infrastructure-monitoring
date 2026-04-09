@@ -1,0 +1,11 @@
+[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/node_exporter --collector.systemd
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

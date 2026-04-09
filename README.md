@@ -48,23 +48,42 @@ Deploying on RHEL 9 presented unique security challenges that required advanced 
    
 Custom binaries in /usr/local/bin were initially blocked by SELinux.
 Solution: Reset the security context to allow execution.
+
 Commands used: 
-sudo chcon -t bin_t /usr/local/bin/node_exporter
-sudo restorecon -v /usr/local/bin/node_exporter
+ sudo chcon -t bin_t /usr/local/bin/node_exporter
+
+ sudo restorecon -v /usr/local/bin/node_exporter
 
 2. Firewalld Port Management
    
 Managed nodes refused connections on port 9100.
 Solution: Configured persistent firewall rules for the specific monitoring ports.
+
 Commands used: 
-sudo firewall-cmd --permanent --add-port=9100/tcp
-sudo firewall-cmd --reload
+ sudo firewall-cmd --permanent --add-port=9100/tcp
+
+ sudo firewall-cmd --reload
 
 3. Grafana Internal Network Blocking
 Grafana was unable to "dial" the local Prometheus API due to SELinux socket restrictions.
 Solution: Enabled the network connection boolean.
+
 Command used: 
-sudo setsebool -P nis_enabled 1
+ sudo setsebool -P nis_enabled 1
+
+4. SELinux Policy Troubleshooting
+During the integration of Grafana and Prometheus, I encountered a permission denied error when Grafana attempted to query the Prometheus API on localhost:9090
+RHEL 9's strict SELinux policy prevents the Grafana process from initiating outbound network connections by default.
+
+The Solution:
+Initially, I attempted to use a Grafana-specific boolean, but discovered it was not defined in the standard RHEL 9 policy. I successfully pivoted to the httpd network boolean, which grants the necessary socket permissions for web-based services to communicate internally:
+
+Command used: 
+**# Attempted (Result: Boolean not defined)**
+sudo setsebool -P grafana_can_network_connect 1
+
+**# Successful Pivot (Standard RHEL 9 Workaround)**
+sudo setsebool -P httpd_can_network_connect 1
 
 
 **📊 Final Results**
@@ -82,7 +101,17 @@ System Dashboard:
 <img width="941" height="325" alt="image" src="https://github.com/user-attachments/assets/9e278ae8-46dc-476e-a46c-c004eaa338fa" />
 
 **👨‍💻 Key Skills Demonstrated:**
-Linux Hardening: Managing SELinux policies and Firewalld zones.
-Infrastructure as Code (Mental): Organizing multi-node service deployments.
-Observability: Building meaningful visualizations from raw time-series data.
-Troubleshooting: Diagnosing 203/EXEC errors and network socket issues.
+1. Linux Hardening: Managing SELinux policies and Firewalld zones.
+2. Infrastructure as Code (Mental): Organizing multi-node service deployments.
+3. Observability: Building meaningful visualizations from raw time-series data.
+4. Troubleshooting: Diagnosing 203/EXEC errors and network socket issues.
+
+LOG SNIPPETS:
+
+<img width="758" height="245" alt="image" src="https://github.com/user-attachments/assets/e7b0d2a2-45c0-41bc-9add-dfd1f8272009" />
+
+<img width="757" height="183" alt="image" src="https://github.com/user-attachments/assets/ec619fe9-ff24-4e14-8f37-fbe897fb9228" />
+
+
+
+
